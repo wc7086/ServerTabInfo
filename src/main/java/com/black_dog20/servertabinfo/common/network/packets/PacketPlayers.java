@@ -1,49 +1,59 @@
 package com.black_dog20.servertabinfo.common.network.packets;
 
+import com.black_dog20.bml.network.messages.api.PlayPacket;
+import com.black_dog20.servertabinfo.ServerTabInfo;
 import com.black_dog20.servertabinfo.client.ClientDataManager;
 import net.minecraft.network.FriendlyByteBuf;
+import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.fml.DistExecutor;
-import net.minecraftforge.network.NetworkEvent;
+import net.neoforged.neoforge.network.handling.IPayloadContext;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.function.Supplier;
 
-public class PacketPlayers {
+public class PacketPlayers extends PlayPacket<PacketPlayers.Data> {
 
-    private Map<UUID, ResourceLocation> playerDims;
+    public static final ResourceLocation ID = new ResourceLocation(ServerTabInfo.MOD_ID, "send_players");
 
-    public PacketPlayers(Map<UUID, ResourceLocation> playerDims) {
-        this.playerDims = playerDims;
-    }
+    public static final record Data(Map<UUID, ResourceLocation> playerDims) implements CustomPacketPayload {
 
-    public static void encode(PacketPlayers msg, FriendlyByteBuf buffer) {
-        buffer.writeInt(msg.playerDims.size());
-        for (Map.Entry<UUID, ResourceLocation> playerKvP : msg.playerDims.entrySet()) {
-            buffer.writeUUID(playerKvP.getKey());
-            buffer.writeResourceLocation(playerKvP.getValue());
+        public Data(FriendlyByteBuf friendlyByteBuf) {
+            this(read(friendlyByteBuf));
+        }
+
+        @Override
+        public void write(FriendlyByteBuf pBuffer) {
+            pBuffer.writeInt(playerDims.size());
+            for (Map.Entry<UUID, ResourceLocation> playerKvP : playerDims.entrySet()) {
+                pBuffer.writeUUID(playerKvP.getKey());
+                pBuffer.writeResourceLocation(playerKvP.getValue());
+            }
+        }
+
+        @Override
+        public @NotNull ResourceLocation id() {
+            return ID;
         }
     }
 
-    public static PacketPlayers decode(FriendlyByteBuf buffer) {
+    private static Map<UUID, ResourceLocation> read(FriendlyByteBuf friendlyByteBuf) {
         Map<UUID, ResourceLocation> map = new HashMap<>();
-        int length = buffer.readInt();
+        int length = friendlyByteBuf.readInt();
         for (int i = 0; i < length; i++) {
-            map.put(buffer.readUUID(), buffer.readResourceLocation());
+            map.put(friendlyByteBuf.readUUID(), friendlyByteBuf.readResourceLocation());
         }
-        return new PacketPlayers(map);
+        return map;
     }
 
-    public static class Handler {
-        public static void handle(PacketPlayers msg, Supplier<NetworkEvent.Context> ctx) {
-            ctx.get().enqueueWork(() -> DistExecutor.unsafeRunWhenOn(Dist.CLIENT, () -> () -> {
-                ClientDataManager.PLAYER_DIMENSIONS = msg.playerDims;
-            }));
+    @Override
+    protected void handleClient(PacketPlayers.Data payload, IPayloadContext context) {
+        context.workHandler().execute(() -> ClientDataManager.PLAYER_DIMENSIONS = payload.playerDims());
+    }
 
-            ctx.get().setPacketHandled(true);
-        }
+    @Override
+    protected void handleServer(PacketPlayers.Data payload, IPayloadContext context) {
+
     }
 }

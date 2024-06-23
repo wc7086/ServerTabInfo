@@ -31,12 +31,13 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.PlayerTeam;
-import net.minecraft.world.scores.Score;
+import net.minecraft.world.scores.ScoreAccess;
+import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraftforge.api.distmarker.Dist;
-import net.minecraftforge.api.distmarker.OnlyIn;
-import net.minecraftforge.client.gui.overlay.NamedGuiOverlay;
-import net.minecraftforge.client.gui.overlay.VanillaGuiOverlay;
+import net.neoforged.api.distmarker.Dist;
+import net.neoforged.api.distmarker.OnlyIn;
+import net.neoforged.neoforge.client.gui.overlay.NamedGuiOverlay;
+import net.neoforged.neoforge.client.gui.overlay.VanillaGuiOverlay;
 
 import java.util.Comparator;
 import java.util.LinkedList;
@@ -46,6 +47,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 import static com.black_dog20.servertabinfo.common.utils.Translations.*;
+import static net.minecraft.world.scores.DisplaySlot.LIST;
 
 @OnlyIn(Dist.CLIENT)
 public class PlayerListOverlay extends GameOverlay.Pre {
@@ -99,7 +101,7 @@ public class PlayerListOverlay extends GameOverlay.Pre {
     @Override
     public boolean doRender(NamedGuiOverlay overlay) {
         if (overlay.id().equals(VanillaGuiOverlay.PLAYER_LIST.id())) {
-            Objective scoreboard = minecraft.level.getScoreboard().getDisplayObjective(0);
+            Objective scoreboard = minecraft.level.getScoreboard().getDisplayObjective(LIST);
             ClientPacketListener handler = minecraft.player.connection;
             boolean shouldShowTabList = (minecraft.options.keyPlayerList.isDown() && (!minecraft.isLocalServer() || handler.getOnlinePlayers().size() > 1 || scoreboard != null));
             return shouldShowTabList && Config.REPLACE_PLAYER_LIST.get();
@@ -143,7 +145,7 @@ public class PlayerListOverlay extends GameOverlay.Pre {
 
     private Component getPlayerScore(PlayerInfo playerInfo, Scoreboard scoreboard) {
         Objective scoreObjective = Optional.ofNullable(scoreboard)
-                .map(s -> s.getDisplayObjective(0))
+                .map(s -> s.getDisplayObjective(LIST))
                 .orElse(null);
 
         return TextComponentBuilder.of("")
@@ -158,15 +160,16 @@ public class PlayerListOverlay extends GameOverlay.Pre {
 
     private int getScore(PlayerInfo playerInfo, Scoreboard scoreboard, Objective scoreObjective) {
         if (scoreObjective != null) {
-            Score score = scoreboard.getOrCreatePlayerScore(playerInfo.getProfile().getName(), scoreObjective);
-            return score.getScore();
+            ScoreHolder scoreholder = ScoreHolder.fromGameProfile(playerInfo.getProfile());
+            ScoreAccess score = scoreboard.getOrCreatePlayerScore(scoreholder, scoreObjective);
+            return score.get();
         } else {
             return 0;
         }
     }
 
     private Supplier<Boolean> showScoreObjective(Scoreboard scoreboard) {
-        return () -> scoreboard != null && scoreboard.getDisplayObjective(0) != null;
+        return () -> scoreboard != null && scoreboard.getDisplayObjective(LIST) != null;
     }
 
     private boolean isAllowed() {

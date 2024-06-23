@@ -1,8 +1,8 @@
 package com.black_dog20.servertabinfo.common.events;
 
+import com.black_dog20.bml.utils.network.NetworkUtils;
 import com.black_dog20.servertabinfo.Config;
 import com.black_dog20.servertabinfo.ServerTabInfo;
-import com.black_dog20.servertabinfo.common.network.PacketHandler;
 import com.black_dog20.servertabinfo.common.network.packets.PacketDimensions;
 import com.black_dog20.servertabinfo.common.network.packets.PacketPlayers;
 import com.black_dog20.servertabinfo.common.utils.Dimension;
@@ -11,11 +11,11 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.entity.player.PlayerEvent;
-import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraftforge.fml.common.Mod;
-import net.minecraftforge.server.ServerLifecycleHooks;
+import net.neoforged.bus.api.SubscribeEvent;
+import net.neoforged.fml.common.Mod;
+import net.neoforged.neoforge.event.TickEvent;
+import net.neoforged.neoforge.event.entity.player.PlayerEvent;
+import net.neoforged.neoforge.server.ServerLifecycleHooks;
 
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -42,7 +42,7 @@ public class ServerEvents {
         }
 
         if(ticks % Config.REFRESH_TICKS.get() == 0) {
-            Pair<Integer, Double> overall = getTpsAndMean(server.tickTimes);
+            Pair<Integer, Double> overall = getTpsAndMean(server.getTickTimesNanos());
             DIMENSIONS.clear();
             DIMENSIONS.add(new Dimension(new ResourceLocation(ServerTabInfo.MOD_ID, "overall"), overall.getSecond(), overall.getFirst()));
             for (ServerLevel world : server.forgeGetWorldMap().values()) {
@@ -58,8 +58,8 @@ public class ServerEvents {
                 PLAYER_DIMENSIONS.put(player.getUUID(), name);
             }
 
-            PacketHandler.sendToAll(new PacketDimensions(DIMENSIONS));
-            PacketHandler.sendToAll(new PacketPlayers(PLAYER_DIMENSIONS));
+            NetworkUtils.sendToAll(new PacketDimensions.Data(DIMENSIONS));
+            NetworkUtils.sendToAll(new PacketPlayers.Data(PLAYER_DIMENSIONS));
 
             ticks = 1;
             return;
@@ -89,8 +89,8 @@ public class ServerEvents {
             ResourceLocation name = playerEntity.getCommandSenderWorld().dimension().location();
             PLAYER_DIMENSIONS.put(playerEntity.getUUID(), name);
 
-            PacketHandler.sendTo(new PacketDimensions(DIMENSIONS), playerEntity);
-            PacketHandler.sendTo(new PacketPlayers(PLAYER_DIMENSIONS), playerEntity);
+            NetworkUtils.sendTo(new PacketDimensions.Data(DIMENSIONS), playerEntity);
+            NetworkUtils.sendTo(new PacketPlayers.Data(PLAYER_DIMENSIONS), playerEntity);
         }
     }
 }
