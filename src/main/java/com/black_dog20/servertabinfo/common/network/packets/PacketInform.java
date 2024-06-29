@@ -37,12 +37,18 @@ public class PacketInform extends ConfigurationPacket<PacketInform.Data> {
 
     @Override
     protected void handleClient(PacketInform.Data payload, IPayloadContext context) {
-        context.workHandler().execute(() -> ClientDataManager.modOnServer = true);
+        context.workHandler().execute(() -> Handler.handle(payload));
     }
 
     @Override
     protected void handleServer(PacketInform.Data payload, IPayloadContext context) {
 
+    }
+
+    private static final class Handler {
+        private static void handle(PacketInform.Data payload) {
+            ClientDataManager.modOnServer = true;
+        }
     }
 
     public record Task(ServerConfigurationPacketListener listener) implements ICustomConfigurationTask {

@@ -50,11 +50,17 @@ public class PacketDimensions extends PlayPacket<PacketDimensions.Data> {
 
     @Override
     protected void handleClient(PacketDimensions.Data payload, IPayloadContext context) {
-        context.workHandler().execute(() -> ClientDataManager.DIMENSIONS = payload.dimensions);
+        context.workHandler().execute(() -> Handler.handle(payload));
     }
 
     @Override
     protected void handleServer(PacketDimensions.Data payload, IPayloadContext context) {
 
+    }
+
+    private static final class Handler {
+        private static void handle(PacketDimensions.Data payload) {
+            ClientDataManager.DIMENSIONS = payload.dimensions;
+        }
     }
 }
